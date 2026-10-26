@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Ranked and Peak match analysis for Honor of Kings." />
+    <title>RankLab</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="js/engine.js" defer></script>
+    <script src="js/app.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#decision">
+        <span class="brand-mark">R</span>
+        <span><strong>RankLab</strong><small>RANKED / PEAK</small></span>
+      </a>
+      <div class="toolbar">
+        <span id="source-pill" class="pill">Loading</span>
+        <button id="refresh-button" class="button small" type="button">Refresh</button>
+      </div>
+    </header>
+
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab active" type="button" role="tab" data-tab="decision" aria-controls="panel-decision" aria-selected="true">Decision</button>
+      <button class="tab" type="button" role="tab" data-tab="evidence" aria-controls="panel-evidence" aria-selected="false">Evidence</button>
+      <button class="tab" type="button" role="tab" data-tab="data" aria-controls="panel-data" aria-selected="false">Data</button>
+      <button class="tab" type="button" role="tab" data-tab="sources" aria-controls="panel-sources" aria-selected="false">Sources</button>
+    </nav>
+
+    <main class="shell">
+      <div class="modebar">
+        <div class="segmented" role="radiogroup" aria-label="Game mode">
+          <button class="mode active" type="button" role="radio" data-mode="ranked" aria-checked="true">
+            Ranked <span id="ranked-count">0</span>
+          </button>
+          <button class="mode" type="button" role="radio" data-mode="peak" aria-checked="false">
+            Peak <span id="peak-count">0</span>
+          </button>
+        </div>
+        <span id="mode-note"></span>
+      </div>
+
+      <section id="panel-decision" class="tab-panel active" role="tabpanel" aria-labelledby="decision-title">
+        <div id="decision-root"></div>
+      </section>
+
+      <section id="panel-evidence" class="tab-panel" role="tabpanel" hidden>
+        <div class="heading">
+          <div><span class="eyebrow">HISTORY</span><h1>Evidence</h1></div>
+          <p>Sample size and confidence intervals are shown for every split.</p>
+        </div>
+        <div id="evidence-root"></div>
+      </section>
+
+      <section id="panel-data" class="tab-panel" role="tabpanel" hidden>
+        <div class="heading">
+          <div><span class="eyebrow">LOCAL DATA</span><h1>Data</h1></div>
+          <p>Ranked and Peak data are stored separately.</p>
+        </div>
+
+        <div class="grid two">
+          <section class="card">
+            <div class="card-head">
+              <div><h2>Import</h2><p>CSV, TSV, or pasted rows.</p></div>
+              <button class="button small" id="template-button" type="button">Template</button>
+            </div>
+            <label class="drop" id="drop-zone" for="csv-file">
+              <strong>Choose a file</strong>
+              <span>or drop it here</span>
+              <input id="csv-file" type="file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain" />
+            </label>
+            <label class="label" for="csv-paste">Paste rows</label>
+            <textarea id="csv-paste" class="input mono" rows="6" placeholder="start_time,end_time,result,mode,hero,role,delta,note"></textarea>
+            <div class="actions">
+              <button class="button primary" id="import-button" type="button">Import</button>
+              <button class="button" id="demo-button" type="button">Demo data</button>
+            </div>
+            <p id="import-status" class="status" role="status"></p>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <div><h2>Add match</h2><p>End time and delta are optional.</p></div>
+            </div>
+            <form id="manual-form" class="form-grid">
+              <label><span>Start</span><input id="manual-start" name="startAt" type="datetime-local" required /></label>
+              <label><span>End</span><input id="manual-end" name="endAt" type="datetime-local" /></label>
+              <label><span>Result</span><select id="manual-result" name="result"><option value="win">Win</option><option value="loss">Loss</option></select></label>
+              <label><span>Mode</span><select id="manual-mode" name="mode"><option value="Ranked">Ranked</option><option value="Peak">Peak</option></select></label>
+              <label><span>Hero</span><input id="manual-hero" name="hero" maxlength="32" placeholder="Optional" /></label>
+              <label><span>Delta</span><input id="manual-delta" name="starDelta" type="number" step="0.5" placeholder="Auto" /></label>
+              <button class="button primary span-2" type="submit">Add</button>
+            </form>
+          </section>
+        </div>
+
+        <section class="card spaced">
+          <div class="card-head"><div><h2>Rules</h2><p>Saved for the selected mode.</p></div></div>
+          <form id="settings-form" class="form-grid settings">
+            <label><span>Risk</span><select name="riskMode"><option value="conservative">Conservative</option><option value="balanced">Balanced</option><option value="aggressive">Aggressive</option></select></label>
+            <label><span>Session limit</span><input name="sessionCap" type="number" min="1" max="30" /></label>
+            <label><span>Loss limit</span><input name="stopLossStreak" type="number" min="1" max="10" /></label>
+            <label><span>New session after</span><input name="sessionBreakMin" type="number" min="30" max="720" /></label>
+            <label><span>Cooldown after loss</span><input name="cooldownMin" type="number" min="0" max="240" /></label>
+            <label><span>Default duration</span><input name="defaultMatchMin" type="number" min="5" max="120" /></label>
+            <label><span id="win-label">Win stars</span><input name="winPoints" type="number" min="0" max="100" step="0.5" /></label>
+            <label><span id="loss-label">Loss stars</span><input name="lossPoints" type="number" min="0" max="100" step="0.5" /></label>
+            <label><span>Active from</span><input name="activeStartHour" type="number" min="0" max="23" /></label>
+            <label><span>Active to</span><input name="activeEndHour" type="number" min="1" max="24" /></label>
+          </form>
+          <p id="points-note" class="status"></p>
+        </section>
+
+        <section class="card spaced">
+          <div class="card-head">
+            <div><h2>Matches</h2><p id="data-summary"></p></div>
+            <div class="actions">
+              <button class="button small" id="export-csv" type="button">CSV</button>
+              <button class="button small" id="export-json" type="button">JSON</button>
+              <button class="button small danger" id="clear-data" type="button">Clear</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Start</th><th>Mode</th><th>Result</th><th>Hero</th><th>Session</th><th>Delta</th><th></th></tr></thead>
+              <tbody id="match-table"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="panel-sources" class="tab-panel" role="tabpanel" hidden>
+        <div class="heading">
+          <div><span class="eyebrow">PUBLIC REFERENCES</span><h1>Sources</h1></div>
+          <p>Official statements, public projects, and one academic paper.</p>
+        </div>
+        <div id="sources-root"></div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <noscript>This app requires JavaScript.</noscript>
+  </body>
+</html>

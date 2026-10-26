@@ -1,0 +1,13 @@
+{
+  "name": "rank-peak-lab",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Ranked and Peak match analysis for Honor of Kings",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
